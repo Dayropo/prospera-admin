@@ -1,19 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
+import { Download, Eye, Search } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useMemo, useState } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -21,61 +16,92 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Eye, Download } from "lucide-react"
+import { useTransactionsQuery } from "@/utils/api"
 
 export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
+  const limit = 25
 
-  // TODO: Fetch real data from API
-  const transactions = [
-    {
-      id: "TXN001",
-      user: "John Doe",
-      type: "Transfer",
-      amount: "₦50,000",
-      status: "completed",
-      date: "2024-03-10 10:30",
-      reference: "REF123456",
-    },
-    {
-      id: "TXN002",
-      user: "Jane Smith",
-      type: "Withdrawal",
-      amount: "₦25,000",
-      status: "pending",
-      date: "2024-03-10 11:45",
-      reference: "REF123457",
-    },
-    {
-      id: "TXN003",
-      user: "Mike Johnson",
-      type: "Deposit",
-      amount: "₦100,000",
-      status: "completed",
-      date: "2024-03-10 09:15",
-      reference: "REF123458",
-    },
-    {
-      id: "TXN004",
-      user: "Sarah Williams",
-      type: "Repayment",
-      amount: "₦75,000",
-      status: "failed",
-      date: "2024-03-09 16:20",
-      reference: "REF123459",
-    },
-  ]
+  const { data, isLoading } = useTransactionsQuery({
+    page,
+    limit,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+  })
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      completed: "default",
-      pending: "secondary",
-      failed: "destructive",
-    }
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
-  }
+  const columns: ColumnDef<ITransaction>[] = useMemo(
+    () => [
+      {
+        accessorKey: "referenceId",
+        header: "Reference",
+        cell: ({ row }) => <div className="font-medium">{row.getValue("referenceId")}</div>,
+      },
+      {
+        accessorKey: "user",
+        header: "User",
+        cell: ({ row }) => {
+          const user = row.getValue("user") as IUser
+          return user?.fullName || "N/A"
+        },
+      },
+      {
+        accessorKey: "transactionType",
+        header: "Type",
+      },
+      {
+        accessorKey: "amount",
+        header: "Amount",
+        cell: ({ row }) => {
+          const amount = parseFloat(row.getValue("amount"))
+          const currency = row.original.currency
+          return new Intl.NumberFormat("en-NG", {
+            style: "currency",
+            currency: currency || "NGN",
+          }).format(amount)
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.getValue("status") as string
+          const variants: Record<string, "default" | "secondary" | "destructive"> = {
+            COMPLETED: "default",
+            PENDING: "secondary",
+            FAILED: "destructive",
+            PROCESSING: "secondary",
+          }
+          return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Date",
+        cell: ({ row }) => {
+          const date = new Date(row.getValue("createdAt"))
+          return date.toLocaleString()
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/transactions/${row.original.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
+
+  const transactions = data?.data?.data || []
 
   const handleExport = () => {
     // TODO: Implement export functionality
@@ -108,7 +134,7 @@ export default function TransactionsPage() {
               <Input
                 placeholder="Search by reference, user, or amount..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -137,41 +163,13 @@ export default function TransactionsPage() {
             </Select>
           </div>
 
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-medium">{transaction.reference}</TableCell>
-                    <TableCell>{transaction.user}</TableCell>
-                    <TableCell>{transaction.type}</TableCell>
-                    <TableCell>{transaction.amount}</TableCell>
-                    <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                    <TableCell>{transaction.date}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/transactions/${transaction.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={transactions} pageSize={25} />
+          )}
         </CardContent>
       </Card>
     </div>

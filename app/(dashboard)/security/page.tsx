@@ -1,63 +1,90 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ColumnDef } from "@tanstack/react-table"
+import { AlertTriangle, Lock, Shield } from "lucide-react"
+import { useMemo } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
-import { Shield, Lock, AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLockedAccountsQuery } from "@/utils/api"
 
 export default function SecurityPage() {
-  // TODO: Fetch real data from API
-  const lockedAccounts = [
-    {
-      id: "1",
-      user: "John Doe",
-      email: "john@example.com",
-      failedAttempts: 5,
-      lockedAt: "2024-03-10 14:30",
-    },
-    {
-      id: "2",
-      user: "Jane Smith",
-      email: "jane@example.com",
-      failedAttempts: 5,
-      lockedAt: "2024-03-09 10:15",
-    },
-  ]
+  const { data, isLoading } = useLockedAccountsQuery()
 
-  const suspiciousActivities = [
-    {
-      id: "1",
-      user: "Mike Johnson",
-      activity: "Multiple failed login attempts",
-      ipAddress: "192.168.1.100",
-      timestamp: "2024-03-10 15:45",
-      severity: "high",
-    },
-    {
-      id: "2",
-      user: "Sarah Williams",
-      activity: "Login from new device",
-      ipAddress: "192.168.1.101",
-      timestamp: "2024-03-10 12:30",
-      severity: "medium",
-    },
-  ]
+  const lockedAccounts = data?.data || []
 
-  const getSeverityBadge = (severity: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      high: "destructive",
-      medium: "secondary",
-      low: "default",
-    }
-    return <Badge variant={variants[severity] || "default"}>{severity}</Badge>
-  }
+  const lockedAccountsColumns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "user",
+        header: "User",
+        cell: ({ row }) => {
+          const user = row.getValue("user") as any
+          return <div className="font-medium">{user?.fullName || "N/A"}</div>
+        },
+      },
+      {
+        accessorKey: "user.email",
+        header: "Email",
+        cell: ({ row }) => {
+          const user = row.original.user as any
+          return user?.email || "N/A"
+        },
+      },
+      {
+        accessorKey: "failedAttempts",
+        header: "Failed Attempts",
+        cell: ({ row }) => `${row.getValue("failedAttempts")}/5`,
+      },
+      {
+        accessorKey: "lockedAt",
+        header: "Locked At",
+        cell: ({ row }) => {
+          const date = new Date(row.getValue("lockedAt"))
+          return date.toLocaleString()
+        },
+      },
+    ],
+    [],
+  )
+
+  const suspiciousActivities: any[] = []
+
+  const suspiciousActivitiesColumns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "user",
+        header: "User",
+        cell: ({ row }) => <div className="font-medium">{row.getValue("user")}</div>,
+      },
+      {
+        accessorKey: "activity",
+        header: "Activity",
+      },
+      {
+        accessorKey: "ipAddress",
+        header: "IP Address",
+      },
+      {
+        accessorKey: "timestamp",
+        header: "Timestamp",
+      },
+      {
+        accessorKey: "severity",
+        header: "Severity",
+        cell: ({ row }) => {
+          const severity = row.getValue("severity") as string
+          const variants: Record<string, "default" | "secondary" | "destructive"> = {
+            high: "destructive",
+            medium: "secondary",
+            low: "default",
+          }
+          return <Badge variant={variants[severity] || "default"}>{severity}</Badge>
+        },
+      },
+    ],
+    [],
+  )
 
   return (
     <div className="space-y-6">
@@ -109,28 +136,13 @@ export default function SecurityPage() {
           <CardDescription>Users locked due to failed PIN attempts</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Failed Attempts</TableHead>
-                  <TableHead>Locked At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lockedAccounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.user}</TableCell>
-                    <TableCell>{account.email}</TableCell>
-                    <TableCell>{account.failedAttempts}/5</TableCell>
-                    <TableCell>{account.lockedAt}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : (
+            <DataTable columns={lockedAccountsColumns} data={lockedAccounts} pageSize={10} />
+          )}
         </CardContent>
       </Card>
 
@@ -141,30 +153,11 @@ export default function SecurityPage() {
           <CardDescription>Recent security events requiring attention</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Activity</TableHead>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Severity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {suspiciousActivities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.user}</TableCell>
-                    <TableCell>{activity.activity}</TableCell>
-                    <TableCell>{activity.ipAddress}</TableCell>
-                    <TableCell>{activity.timestamp}</TableCell>
-                    <TableCell>{getSeverityBadge(activity.severity)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={suspiciousActivitiesColumns}
+            data={suspiciousActivities}
+            pageSize={10}
+          />
         </CardContent>
       </Card>
     </div>

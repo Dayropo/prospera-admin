@@ -1,17 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ColumnDef } from "@tanstack/react-table"
+import { Shield, Users } from "lucide-react"
+import { useMemo } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Shield, Users } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function RolesPage() {
   // TODO: Fetch real data from API
@@ -32,6 +27,48 @@ export default function RolesPage() {
     },
   ]
 
+  const rolesColumns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Role Name",
+        cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+      },
+      {
+        accessorKey: "userCount",
+        header: "Users",
+      },
+      {
+        accessorKey: "permissions",
+        header: "Permissions",
+        cell: ({ row }) => {
+          const permissions = row.getValue("permissions") as string[]
+          return permissions.includes("all") ? (
+            <Badge>All Permissions</Badge>
+          ) : (
+            <Badge variant="secondary">{permissions.length} permissions</Badge>
+          )
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: () => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm">
+              Edit
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
+
   const permissions = [
     { id: "1", name: "users.view", description: "View user information" },
     { id: "2", name: "users.edit", description: "Edit user information" },
@@ -44,6 +81,21 @@ export default function RolesPage() {
     { id: "9", name: "settings.view", description: "View system settings" },
     { id: "10", name: "settings.edit", description: "Edit system settings" },
   ]
+
+  const permissionsColumns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Permission",
+        cell: ({ row }) => <code className="text-sm">{row.getValue("name")}</code>,
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+      },
+    ],
+    [],
+  )
 
   return (
     <div className="space-y-6">
@@ -86,40 +138,7 @@ export default function RolesPage() {
           <CardDescription>Admin roles and their permissions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Role Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Users</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell>{role.userCount}</TableCell>
-                    <TableCell>
-                      {role.permissions.includes("all") ? (
-                        <Badge>All Permissions</Badge>
-                      ) : (
-                        <Badge variant="secondary">{role.permissions.length} permissions</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable columns={rolesColumns} data={roles} pageSize={10} />
         </CardContent>
       </Card>
 
@@ -130,26 +149,7 @@ export default function RolesPage() {
           <CardDescription>All permissions that can be assigned to roles</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Permission</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {permissions.map((permission) => (
-                  <TableRow key={permission.id}>
-                    <TableCell className="font-medium">
-                      <code className="text-sm">{permission.name}</code>
-                    </TableCell>
-                    <TableCell>{permission.description}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable columns={permissionsColumns} data={permissions} pageSize={10} />
         </CardContent>
       </Card>
     </div>

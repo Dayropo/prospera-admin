@@ -1,255 +1,196 @@
 "use client"
 
-import { use } from "react"
+import { format } from "date-fns"
+import { ArrowLeft, Pencil, User } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { use, useState } from "react"
+import { toast } from "sonner"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Ban, CheckCircle2, Shield } from "lucide-react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useUpdateUserMutation, useUserQuery } from "@/utils/api/users"
 
 export default function UserDetailPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params)
+  const [isEditOpen, setIsEditOpen] = useState(false)
 
-  // TODO: Fetch real user data from API
-  const user = {
-    id: userId,
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+234 801 234 5678",
-    status: "active",
-    kycStatus: "verified",
-    registeredAt: "2024-01-15",
-    lastLogin: "2024-03-10 14:30",
-    wallets: {
-      main: "₦125,000",
-      escrow: "₦50,000",
-      repayment: "₦25,000",
-      platform: "₦10,000",
-    },
-    pinStatus: {
-      hasPin: true,
-      isLocked: false,
-      failedAttempts: 0,
-    },
+  const { data: userData, isLoading: userLoading, refetch } = useUserQuery(userId)
+  const updateUserMutation = useUpdateUserMutation()
+
+  const user = userData?.data
+
+  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+
+    updateUserMutation.mutate(
+      {
+        id: userId,
+        data: {
+          fullName: formData.get("fullName") as string,
+          phoneNumber: formData.get("phoneNumber") as string,
+          residentialAddress: formData.get("residentialAddress") as string,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success("User details updated successfully")
+          setIsEditOpen(false)
+          refetch()
+        },
+        onError: () => {
+          toast.error("Failed to update user details")
+        },
+      },
+    )
   }
 
-  const transactions = [
-    {
-      id: "1",
-      type: "Transfer",
-      amount: "₦50,000",
-      status: "completed",
-      date: "2024-03-10 10:30",
-    },
-    {
-      id: "2",
-      type: "Withdrawal",
-      amount: "₦25,000",
-      status: "completed",
-      date: "2024-03-09 15:20",
-    },
-  ]
-
-  const handleSuspendUser = () => {
-    // TODO: Implement suspend user API call
-    console.log("Suspend user:", userId)
+  if (userLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
 
-  const handleActivateUser = () => {
-    // TODO: Implement activate user API call
-    console.log("Activate user:", userId)
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">User not found</p>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/users">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
-          <p className="text-muted-foreground">{user.email}</p>
-        </div>
-        <div className="flex gap-2">
-          {user.status === "active" ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Ban className="mr-2 h-4 w-4" />
-                  Suspend User
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Suspend User</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to suspend this user? They will not be able to access their account.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleSuspendUser}>Suspend</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : (
-            <Button onClick={handleActivateUser}>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Activate User
-            </Button>
-          )}
-        </div>
+        <h1 className="text-2xl font-semibold">Back</h1>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Status:</span>
-                  <Badge variant={user.status === "active" ? "default" : "destructive"}>
-                    {user.status}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">KYC Status:</span>
-                  <Badge variant={user.kycStatus === "verified" ? "default" : "secondary"}>
-                    {user.kycStatus}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Phone:</span>
-                  <span className="text-sm">{user.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Registered:</span>
-                  <span className="text-sm">{user.registeredAt}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Last Login:</span>
-                  <span className="text-sm">{user.lastLogin}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Wallet Balances</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Main Balance:</span>
-                  <span className="text-sm font-semibold">{user.wallets.main}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Escrow Balance:</span>
-                  <span className="text-sm font-semibold">{user.wallets.escrow}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Repayment Balance:</span>
-                  <span className="text-sm font-semibold">{user.wallets.repayment}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Platform Balance:</span>
-                  <span className="text-sm font-semibold">{user.wallets.platform}</span>
-                </div>
-              </CardContent>
-            </Card>
+      <Card className="border-none outline-none shadow-none p-0">
+        <CardHeader className="p-0 pb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="size-24">
+                <AvatarFallback>
+                  <User className="size-12" />
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle>{user.fullName}</CardTitle>
+                <p className="text-sm text-muted-foreground capitalize">{user.userType}</p>
+              </div>
+            </div>
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Details
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <form onSubmit={handleUpdateUser}>
+                  <DialogHeader>
+                    <DialogTitle>Edit User Details</DialogTitle>
+                    <DialogDescription>Update the user&apos;s information below.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input id="fullName" name="fullName" defaultValue={user.fullName} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Input
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        defaultValue={user.phoneNumber || ""}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="residentialAddress">Residential Address</Label>
+                      <Input
+                        id="residentialAddress"
+                        name="residentialAddress"
+                        defaultValue={user.residentialAddress || ""}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updateUserMutation.isPending}>
+                      {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        </TabsContent>
+        </CardHeader>
+        <CardContent className="space-y-3 p-0 border-none">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Email</p>
+            <p className="text-sm">{user.email}</p>
+          </div>
 
-        <TabsContent value="transactions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
-              <CardDescription>Recent transactions for this user</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>{transaction.type}</TableCell>
-                      <TableCell>{transaction.amount}</TableCell>
-                      <TableCell>
-                        <Badge variant="default">{transaction.status}</Badge>
-                      </TableCell>
-                      <TableCell>{transaction.date}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
+            <p className="text-sm">{user.phoneNumber || "N/A"}</p>
+          </div>
 
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Security Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  <span className="font-medium">PIN Status</span>
-                </div>
-                <Badge variant={user.pinStatus.hasPin ? "default" : "secondary"}>
-                  {user.pinStatus.hasPin ? "Set" : "Not Set"}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium">PIN Locked:</span>
-                <span className="text-sm">{user.pinStatus.isLocked ? "Yes" : "No"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium">Failed Attempts:</span>
-                <span className="text-sm">{user.pinStatus.failedAttempts}/5</span>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Residential Address</p>
+            <p className="text-sm">{user.residentialAddress || "N/A"}</p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">User Type</p>
+            <p className="text-sm capitalize">{user.userType}</p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
+            <Badge variant={user.isEmailVerified ? "default" : "secondary"}>
+              {user.isEmailVerified ? "Yes" : "No"}
+            </Badge>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Onboarding Complete</p>
+            <Badge variant={user.isOnboardingComplete ? "default" : "secondary"}>
+              {user.isOnboardingComplete ? "Yes" : "No"}
+            </Badge>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Date Onboarded</p>
+            <p className="text-sm">{format(new Date(user.createdAt), "PPP p")}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -1,79 +1,81 @@
 "use client"
 
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import type { ColumnDef } from "@tanstack/react-table"
+import { useMemo } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Search } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLogsQuery } from "@/utils/api"
+import { Button } from "@/components/ui/button"
+import { Eye } from "lucide-react"
+import Link from "next/link"
 
 export default function ActivityLogPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [actionFilter, setActionFilter] = useState("all")
+  const { data, isLoading } = useLogsQuery()
 
-  // TODO: Fetch real data from API
-  const activities = [
-    {
-      id: "1",
-      user: "Admin User",
-      action: "User Suspended",
-      target: "John Doe",
-      ipAddress: "192.168.1.1",
-      timestamp: "2024-03-10 14:30",
-      details: "Suspended user due to suspicious activity",
-    },
-    {
-      id: "2",
-      user: "Admin User",
-      action: "Transaction Approved",
-      target: "TXN001",
-      ipAddress: "192.168.1.1",
-      timestamp: "2024-03-10 13:15",
-      details: "Approved repayment transaction",
-    },
-    {
-      id: "3",
-      user: "Support Team",
-      action: "Ticket Resolved",
-      target: "TICK002",
-      ipAddress: "192.168.1.2",
-      timestamp: "2024-03-10 11:45",
-      details: "Resolved KYC verification issue",
-    },
-    {
-      id: "4",
-      user: "Admin User",
-      action: "Settings Updated",
-      target: "System Configuration",
-      ipAddress: "192.168.1.1",
-      timestamp: "2024-03-10 10:00",
-      details: "Updated transaction fee settings",
-    },
-  ]
+  const columns: ColumnDef<ILog>[] = useMemo(
+    () => [
+      // {
+      //   accessorKey: "validator",
+      //   header: "Validator",
+      //   cell: ({ row }) => <div className="font-medium">{row.getValue("validator")}</div>,
+      // },
+      {
+        accessorKey: "transaction.transactionType",
+        header: "Action",
+        cell: ({ row }) => {
+          const type = row.original.transaction?.transactionType || "N/A"
+          return <Badge variant="secondary">{type}</Badge>
+        },
+      },
+      {
+        accessorKey: "transactionId",
+        header: "Transaction ID",
+        cell: ({ row }) => (
+          <code className="text-xs">
+            {row.getValue("transactionId")?.toString()?.substring(0, 8)}...
+          </code>
+        ),
+      },
+      {
+        accessorKey: "isVerified",
+        header: "Verified",
+        cell: ({ row }) => {
+          const isVerified = row.getValue("isVerified") as boolean
+          return (
+            <Badge variant={isVerified ? "default" : "destructive"}>
+              {isVerified ? "Verified" : "Unverified"}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Timestamp",
+        cell: ({ row }) => {
+          const date = new Date(row.getValue("createdAt"))
+          return date.toLocaleString()
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/activity-log/${row.original.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
 
-  const getActionBadge = (action: string) => {
-    if (action.includes("Suspended") || action.includes("Rejected")) {
-      return <Badge variant="destructive">{action}</Badge>
-    }
-    if (action.includes("Approved") || action.includes("Resolved")) {
-      return <Badge variant="default">{action}</Badge>
-    }
-    return <Badge variant="secondary">{action}</Badge>
-  }
+  console.log(data?.data)
+  const activities = data?.data?.data || []
 
   return (
     <div className="space-y-6">
@@ -88,58 +90,17 @@ export default function ActivityLogPage() {
           <CardDescription>Complete audit trail of admin actions</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by user, action, or target..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">Loading...</p>
             </div>
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="user">User Actions</SelectItem>
-                <SelectItem value="transaction">Transaction Actions</SelectItem>
-                <SelectItem value="settings">Settings Changes</SelectItem>
-                <SelectItem value="ticket">Ticket Actions</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Admin User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.user}</TableCell>
-                    <TableCell>{getActionBadge(activity.action)}</TableCell>
-                    <TableCell>{activity.target}</TableCell>
-                    <TableCell>{activity.ipAddress}</TableCell>
-                    <TableCell>{activity.timestamp}</TableCell>
-                    <TableCell className="max-w-xs truncate">{activity.details}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          ) : activities.length === 0 ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">No activity logs found</p>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={activities} pageSize={20} />
+          )}
         </CardContent>
       </Card>
     </div>

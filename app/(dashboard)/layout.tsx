@@ -19,6 +19,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import { useUserStore } from "@/store/userStore"
+import { logoutUser } from "@/utils/logoutUtils"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -34,6 +36,16 @@ const navigation = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const user = useUserStore(state => state.user)
+
+  const initials = user?.fullName
+    ? user.fullName
+        .split(" ")
+        .map(n => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "AD"
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -97,18 +109,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="border-t p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-semibold">AD</span>
+                <span className="text-sm font-semibold">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Admin User</p>
-                <p className="text-xs text-muted-foreground truncate">admin@prospera.com</p>
+                <p className="text-sm font-medium truncate">{user?.fullName ?? "Admin User"}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="w-full" asChild>
-              <Link href="/login">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Link>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => logoutUser()}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
           </div>
         </div>

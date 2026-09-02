@@ -1,19 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
+import { Eye, Search } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useMemo, useState } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -21,63 +16,92 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Eye } from "lucide-react"
+import { useUsersQuery } from "@/utils/api"
 
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
+  const limit = 20
+  const { data, status, isLoading } = useUsersQuery({ page, limit })
 
-  // TODO: Fetch real data from API
-  const users = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+234 801 234 5678",
-      status: "active",
-      kycStatus: "verified",
-      registeredAt: "2024-01-15",
-      walletBalance: "₦125,000",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "+234 802 345 6789",
-      status: "active",
-      kycStatus: "pending",
-      registeredAt: "2024-02-20",
-      walletBalance: "₦50,000",
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      phone: "+234 803 456 7890",
-      status: "suspended",
-      kycStatus: "verified",
-      registeredAt: "2024-01-10",
-      walletBalance: "₦0",
-    },
-  ]
+  const columns: ColumnDef<IUser>[] = useMemo(
+    () => [
+      {
+        accessorKey: "fullName",
+        header: "Name",
+        cell: ({ row }) => <div className="font-medium">{row.getValue("fullName")}</div>,
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+      },
+      {
+        accessorKey: "phoneNumber",
+        header: "Phone",
+      },
+      {
+        accessorKey: "userType",
+        header: "User Type",
+        cell: ({ row }) => {
+          const userType = row.getValue("userType") as string
+          return (
+            <Badge variant={userType === "lender" ? "default" : "secondary"}>
+              {userType || "N/A"}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: "isVerified",
+        header: "Verified",
+        cell: ({ row }) => {
+          const isVerified = row.getValue("isVerified") as boolean
+          return (
+            <Badge variant={isVerified ? "default" : "secondary"}>
+              {isVerified ? "Verified" : "Unverified"}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: "isOnboardingComplete",
+        header: "Onboarding",
+        cell: ({ row }) => {
+          const isComplete = row.getValue("isOnboardingComplete") as boolean
+          return (
+            <Badge variant={isComplete ? "default" : "secondary"}>
+              {isComplete ? "Complete" : "Incomplete"}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Registered",
+        cell: ({ row }) => {
+          const date = new Date(row.getValue("createdAt"))
+          return date.toLocaleDateString()
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/users/${row.original.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      active: "default",
-      suspended: "destructive",
-      inactive: "secondary",
-    }
-    return <Badge variant={variants[status] || "default"}>{status}</Badge>
-  }
-
-  const getKycBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      verified: "default",
-      pending: "secondary",
-      rejected: "destructive",
-    }
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
-  }
+  const users = data?.data?.data || []
 
   return (
     <div className="space-y-6">
@@ -99,7 +123,7 @@ export default function UsersPage() {
               <Input
                 placeholder="Search by name, email, or phone..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -116,43 +140,13 @@ export default function UsersPage() {
             </Select>
           </div>
 
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>KYC Status</TableHead>
-                  <TableHead>Wallet Balance</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell>{getKycBadge(user.kycStatus)}</TableCell>
-                    <TableCell>{user.walletBalance}</TableCell>
-                    <TableCell>{user.registeredAt}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/users/${user.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={users} pageSize={20} />
+          )}
         </CardContent>
       </Card>
     </div>

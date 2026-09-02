@@ -1,9 +1,12 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
+import type { Metadata } from "next";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import TanstackProvider from "@/providers/TanstackProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -11,6 +14,11 @@ const fontMono = Geist_Mono({
 	subsets: ["latin"],
 	variable: "--font-mono",
 });
+
+export const metadata: Metadata = {
+	title: "Prospera Admin",
+	description: "Prospera Admin Dashboard",
+};
 
 export default function RootLayout({
 	children,
@@ -30,7 +38,12 @@ export default function RootLayout({
 		>
 			<body>
 				<ThemeProvider>
-					<TooltipProvider>{children}</TooltipProvider>
+					<TanstackProvider>
+						<TooltipProvider>
+							{children}
+							<Toaster />
+						</TooltipProvider>
+					</TanstackProvider>
 				</ThemeProvider>
 			</body>
 		</html>

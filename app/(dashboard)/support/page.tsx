@@ -1,19 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
+import { Eye, MessageSquare, Search } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useMemo, useState } from "react"
+import { DataTable } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -21,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Eye, MessageSquare } from "lucide-react"
 
 export default function SupportPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -58,23 +52,71 @@ export default function SupportPage() {
     },
   ]
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      open: "destructive",
-      in_progress: "secondary",
-      resolved: "default",
-    }
-    return <Badge variant={variants[status] || "secondary"}>{status.replace("_", " ")}</Badge>
-  }
-
-  const getPriorityBadge = (priority: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      high: "destructive",
-      medium: "secondary",
-      low: "default",
-    }
-    return <Badge variant={variants[priority] || "default"}>{priority}</Badge>
-  }
+  const columns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "id",
+        header: "Ticket ID",
+        cell: ({ row }) => <div className="font-medium">{row.getValue("id")}</div>,
+      },
+      {
+        accessorKey: "user",
+        header: "User",
+      },
+      {
+        accessorKey: "subject",
+        header: "Subject",
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.getValue("status") as string
+          const variants: Record<string, "default" | "secondary" | "destructive"> = {
+            open: "destructive",
+            in_progress: "secondary",
+            resolved: "default",
+          }
+          return <Badge variant={variants[status] || "secondary"}>{status.replace("_", " ")}</Badge>
+        },
+      },
+      {
+        accessorKey: "priority",
+        header: "Priority",
+        cell: ({ row }) => {
+          const priority = row.getValue("priority") as string
+          const variants: Record<string, "default" | "secondary" | "destructive"> = {
+            high: "destructive",
+            medium: "secondary",
+            low: "default",
+          }
+          return <Badge variant={variants[priority] || "default"}>{priority}</Badge>
+        },
+      },
+      {
+        accessorKey: "assignedTo",
+        header: "Assigned To",
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/support/ticket/${row.original.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
 
   return (
     <div className="space-y-6">
@@ -94,7 +136,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {tickets.filter((t) => t.status === "open").length}
+              {tickets.filter(t => t.status === "open").length}
             </div>
             <p className="text-xs text-muted-foreground">Awaiting response</p>
           </CardContent>
@@ -107,7 +149,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {tickets.filter((t) => t.status === "in_progress").length}
+              {tickets.filter(t => t.status === "in_progress").length}
             </div>
             <p className="text-xs text-muted-foreground">Being handled</p>
           </CardContent>
@@ -120,7 +162,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {tickets.filter((t) => t.status === "resolved").length}
+              {tickets.filter(t => t.status === "resolved").length}
             </div>
             <p className="text-xs text-muted-foreground">This week</p>
           </CardContent>
@@ -140,7 +182,7 @@ export default function SupportPage() {
               <Input
                 placeholder="Search by ticket ID, user, or subject..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -157,43 +199,7 @@ export default function SupportPage() {
             </Select>
           </div>
 
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ticket ID</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell className="font-medium">{ticket.id}</TableCell>
-                    <TableCell>{ticket.user}</TableCell>
-                    <TableCell>{ticket.subject}</TableCell>
-                    <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                    <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
-                    <TableCell>{ticket.assignedTo}</TableCell>
-                    <TableCell>{ticket.createdAt}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/support/ticket/${ticket.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable columns={columns} data={tickets} pageSize={10} />
         </CardContent>
       </Card>
     </div>
