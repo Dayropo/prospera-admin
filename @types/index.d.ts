@@ -7,6 +7,17 @@ interface IApiResponse<T> {
   data: T
 }
 
+interface IPaginationMeta {
+  total: number
+  page: number
+  limit: number
+}
+
+interface IPaginatedData<T> {
+  data: T[]
+  meta: IPaginationMeta
+}
+
 interface IUser {
   id: string
   email: string

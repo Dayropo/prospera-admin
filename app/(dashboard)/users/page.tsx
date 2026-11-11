@@ -102,6 +102,8 @@ export default function UsersPage() {
   )
 
   const users = data?.data?.data || []
+  const total = data?.data?.meta?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / limit))
 
   return (
     <div className="space-y-6">
@@ -145,7 +147,12 @@ export default function UsersPage() {
               <p className="text-muted-foreground">Loading...</p>
             </div>
           ) : (
-            <DataTable columns={columns} data={users} pageSize={20} />
+            <DataTable
+              columns={columns}
+              data={users}
+              pageSize={20}
+              manualPagination={{ page, pageCount, onPageChange: setPage }}
+            />
           )}
         </CardContent>
       </Card>

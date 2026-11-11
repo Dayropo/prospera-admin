@@ -4,14 +4,17 @@ import axiosInstance from "../axiosInstance"
 // GET /admin/users?page=1&limit=20
 export const useUsersQuery = (options: { page?: number; limit?: number }) => {
   return useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", options.page, options.limit],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<IApiResponse<IUser[]>>("/admin/users", {
-        params: {
-          page: options.page ?? 1,
-          limit: options.limit ?? 20,
+      const { data } = await axiosInstance.get<IApiResponse<IPaginatedData<IUser>>>(
+        "/admin/users",
+        {
+          params: {
+            page: options.page ?? 1,
+            limit: options.limit ?? 20,
+          },
         },
-      })
+      )
 
       return data
     },

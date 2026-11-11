@@ -8,15 +8,18 @@ export const useTransactionsQuery = (options: {
   status?: string
 }) => {
   return useQuery({
-    queryKey: ["transactions"],
+    queryKey: ["transactions", options.page, options.limit, options.status],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<IApiResponse<ITransaction[]>>("/admin/transactions", {
-        params: {
-          page: options.page ?? 1,
-          limit: options.limit ?? 25,
-          status: options.status,
+      const { data } = await axiosInstance.get<IApiResponse<IPaginatedData<ITransaction>>>(
+        "/admin/transactions",
+        {
+          params: {
+            page: options.page ?? 1,
+            limit: options.limit ?? 25,
+            status: options.status,
+          },
         },
-      })
+      )
 
       return data
     },

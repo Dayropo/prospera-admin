@@ -27,6 +27,16 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchKey?: string
   pageSize?: number
+  /**
+   * Server-side pagination. When provided, `data` is treated as a single
+   * already-fetched page (not the full dataset), and the built-in
+   * client-side pagination is disabled in favor of these props.
+   */
+  manualPagination?: {
+    page: number
+    pageCount: number
+    onPageChange: (page: number) => void
+  }
 }
 
 export function DataTable<TData, TValue>({
@@ -34,6 +44,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   pageSize = 10,
+  manualPagination,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -42,7 +53,9 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
+    manualPagination: !!manualPagination,
+    pageCount: manualPagination?.pageCount,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -57,6 +70,29 @@ export function DataTable<TData, TValue>({
       },
     },
   })
+
+  const canPreviousPage = manualPagination
+    ? manualPagination.page > 1
+    : table.getCanPreviousPage()
+  const canNextPage = manualPagination
+    ? manualPagination.page < manualPagination.pageCount
+    : table.getCanNextPage()
+
+  const handlePreviousPage = () => {
+    if (manualPagination) {
+      manualPagination.onPageChange(manualPagination.page - 1)
+    } else {
+      table.previousPage()
+    }
+  }
+
+  const handleNextPage = () => {
+    if (manualPagination) {
+      manualPagination.onPageChange(manualPagination.page + 1)
+    } else {
+      table.nextPage()
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -97,20 +133,10 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
+        <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={!canPreviousPage}>
           Previous
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
+        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!canNextPage}>
           Next
         </Button>
       </div>

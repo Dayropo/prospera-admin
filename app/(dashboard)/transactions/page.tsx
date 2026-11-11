@@ -102,6 +102,8 @@ export default function TransactionsPage() {
   )
 
   const transactions = data?.data?.data || []
+  const total = data?.data?.meta?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / limit))
 
   const handleExport = () => {
     // TODO: Implement export functionality
@@ -150,7 +152,13 @@ export default function TransactionsPage() {
                 <SelectItem value="repayment">Repayment</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select
+              value={statusFilter}
+              onValueChange={value => {
+                setStatusFilter(value)
+                setPage(1)
+              }}
+            >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -168,7 +176,12 @@ export default function TransactionsPage() {
               <p className="text-muted-foreground">Loading...</p>
             </div>
           ) : (
-            <DataTable columns={columns} data={transactions} pageSize={25} />
+            <DataTable
+              columns={columns}
+              data={transactions}
+              pageSize={25}
+              manualPagination={{ page, pageCount, onPageChange: setPage }}
+            />
           )}
         </CardContent>
       </Card>
